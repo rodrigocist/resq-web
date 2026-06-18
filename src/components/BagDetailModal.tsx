@@ -13,15 +13,12 @@ interface Bag {
   merchant_id: string;
   merchant_name: string;
   price_discount: number;
+  price_original?: number;
   stock: number;
   status: string;
   pickup_window?: { start?: any; end?: any };
-  start?: any;
-  end?: any;
   merchant_rating?: number;
   merchant_image_url?: string;
-  image_url?: string;
-  rating?: number;
 }
 
 interface BagDetailModalProps {
@@ -43,6 +40,7 @@ function fmt(date: Date | null) {
 
 const DESCRIPTIONS: Record<string, string> = {
   'bakery': 'A delightful mix of freshly baked goods — breads, pastries, and sweet treats that would otherwise go to waste. Each bag is a surprise!',
+  'coffee': 'Breads, pastries, and sweet treats that would otherwise go to waste.',
   'eco': 'A seasonal selection of organic fruits and vegetables sourced locally. Fresh, nutritious, and rescued with love.',
   'sushi': 'Premium sushi rolls, nigiri, and sides prepared earlier today. Perfect for a quality dinner at a fraction of the price.',
   'pizza': 'Authentic wood-fired pizza slices and sides. Crispy, delicious, and ready to enjoy tonight.',
@@ -57,6 +55,7 @@ function getDescription(name: string): string {
   if (n.includes('sushi') || n.includes('asian') || n.includes('wok')) return DESCRIPTIONS.sushi;
   if (n.includes('pizza') || n.includes('italian')) return DESCRIPTIONS.pizza;
   if (n.includes('market') || n.includes('super')) return DESCRIPTIONS.supermarket;
+  if (n.includes('coffee') || n.includes('shop')) return DESCRIPTIONS.coffee;
   return DESCRIPTIONS.default;
 }
 
@@ -81,13 +80,14 @@ export default function BagDetailModal({ bag, onClose }: BagDetailModalProps) {
 
   if (!bag) return null;
 
-  const imageUrl = bag.merchant_image_url || bag.image_url ||
+  const imageUrl = bag.merchant_image_url ||
     'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800';
-  const rating = bag.merchant_rating || bag.rating || 4.6;
-  const originalPrice = (bag.price_discount * 3).toFixed(2);
-  const savings = (parseFloat(originalPrice) - bag.price_discount).toFixed(2);
-  const pickupStart = toDate(bag.pickup_window?.start || bag.start);
-  const pickupEnd = toDate(bag.pickup_window?.end || bag.end);
+  const rating = bag.merchant_rating || 4.6;
+  const originalPrice = bag.price_original ?? parseFloat((bag.price_discount * 3).toFixed(2));
+  const savings = (originalPrice - bag.price_discount).toFixed(2);
+  const savingsPct = Math.round((1 - bag.price_discount / originalPrice) * 100);
+  const pickupStart = toDate(bag.pickup_window?.start);
+  const pickupEnd = toDate(bag.pickup_window?.end);
   const pickupStr = pickupStart && pickupEnd
     ? `${fmt(pickupStart)} – ${fmt(pickupEnd)}`
     : 'Check with merchant';
@@ -132,16 +132,14 @@ export default function BagDetailModal({ bag, onClose }: BagDetailModalProps) {
       {/* Backdrop */}
       <div
         onClick={handleClose}
-        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
-          visible ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'
+          }`}
       />
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-t-3xl bg-white shadow-2xl transition-transform duration-300 ease-out ${
-          visible ? 'translate-y-0' : 'translate-y-full'
-        }`}
+        className={`fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-t-3xl bg-white shadow-2xl transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'
+          }`}
       >
         {/* Image header */}
         <div className="relative h-52 w-full overflow-hidden rounded-t-3xl">
@@ -174,11 +172,11 @@ export default function BagDetailModal({ bag, onClose }: BagDetailModalProps) {
               <span className="text-white font-bold text-sm">£</span>
               <span className="text-white font-extrabold text-3xl">{bag.price_discount.toFixed(2)}</span>
             </div>
-            <span className="text-white/70 text-xs line-through">Value £{originalPrice}</span>
+            <span className="text-white/70 text-xs line-through">Value £{originalPrice.toFixed(2)}</span>
           </div>
 
           <div className="absolute bottom-3 right-4 rounded-full bg-green-500 px-2.5 py-1 text-[10px] font-bold text-white">
-            Save £{savings}
+            Save £{savings} ({savingsPct}% off)
           </div>
         </div>
 
@@ -251,13 +249,12 @@ export default function BagDetailModal({ bag, onClose }: BagDetailModalProps) {
           <button
             onClick={handleAddToCart}
             disabled={isOutOfStock || added}
-            className={`w-full rounded-full py-3.5 font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${
-              added
-                ? 'bg-green-100 text-green-700'
-                : isOutOfStock
+            className={`w-full rounded-full py-3.5 font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${added
+              ? 'bg-green-100 text-green-700'
+              : isOutOfStock
                 ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
                 : 'bg-green-600 hover:bg-green-700 text-white hover:shadow-md active:scale-98'
-            }`}
+              }`}
           >
             {added ? (
               <>

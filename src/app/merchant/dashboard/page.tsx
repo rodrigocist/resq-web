@@ -17,6 +17,7 @@ export default function MerchantDashboard() {
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
 
   // Form states
+  const [priceOriginal, setPriceOriginal] = useState("9.99");
   const [priceDiscount, setPriceDiscount] = useState("3.99");
   const [stock, setStock] = useState("5");
   
@@ -126,30 +127,26 @@ export default function MerchantDashboard() {
     setSuccessMsg("");
 
     const parsedPrice = parseFloat(priceDiscount);
+    const parsedOriginal = parseFloat(priceOriginal);
     const parsedStock = parseInt(stock);
 
-    const baseData = {
+    const bagData = {
       merchant_id: merchantDoc.id,
       merchant_name: merchantDoc.name,
+      price_original: parsedOriginal,
       price_discount: parsedPrice,
       stock: parsedStock,
       status: parsedStock > 0 ? "active" : "sold_out",
-      merchant_rating: merchantDoc.rating || 4.5,
-      merchant_image_url: merchantDoc.image_url || "",
+      pickup_window: {
+        start: Timestamp.fromDate(new Date(startTime)),
+        end: Timestamp.fromDate(new Date(endTime)),
+      },
+      created_at: Timestamp.now(),
     };
 
     if (db) {
       try {
-        await addDoc(collection(db, "surprise_bags"), {
-          ...baseData,
-          pickup_window: {
-            start: Timestamp.fromDate(new Date(startTime)),
-            end: Timestamp.fromDate(new Date(endTime)),
-          },
-          start: Timestamp.fromDate(new Date(startTime)),
-          end: Timestamp.fromDate(new Date(endTime)),
-          created_at: Timestamp.now(),
-        });
+        await addDoc(collection(db, "surprise_bags"), bagData);
         setSuccessMsg("Bag published successfully!");
       } catch (e) {
         console.error("Error saving bag to Firestore:", e);
@@ -243,21 +240,48 @@ export default function MerchantDashboard() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Price Input */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-stone-500 flex items-center gap-1">
-              <PoundSterling className="h-3.5 w-3.5" /> Discounted Price (£)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.50"
-              value={priceDiscount}
-              onChange={(e) => setPriceDiscount(e.target.value)}
-              className="w-full rounded-2xl border border-stone-200 bg-stone-50 py-3 px-4 text-sm text-stone-850 focus:outline-hidden focus:ring-1 focus:ring-green-500/30 focus:border-green-500"
-              required
-            />
+          {/* Price Inputs - side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-stone-500 flex items-center gap-1">
+                <PoundSterling className="h-3.5 w-3.5" /> Original Price (£)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.50"
+                value={priceOriginal}
+                onChange={(e) => setPriceOriginal(e.target.value)}
+                className="w-full rounded-2xl border border-stone-200 bg-stone-50 py-3 px-4 text-sm text-stone-850 focus:outline-hidden focus:ring-1 focus:ring-green-500/30 focus:border-green-500"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-stone-500 flex items-center gap-1">
+                <PoundSterling className="h-3.5 w-3.5 text-green-600" /> Discounted Price (£)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.50"
+                value={priceDiscount}
+                onChange={(e) => setPriceDiscount(e.target.value)}
+                className="w-full rounded-2xl border border-stone-200 bg-stone-50 py-3 px-4 text-sm text-green-700 font-bold focus:outline-hidden focus:ring-1 focus:ring-green-500/30 focus:border-green-500"
+                required
+              />
+            </div>
           </div>
+
+          {/* Savings preview */}
+          {priceOriginal && priceDiscount && parseFloat(priceOriginal) > parseFloat(priceDiscount) && (
+            <div className="rounded-xl bg-green-50 border border-green-100 px-3 py-2 text-xs text-green-700 font-semibold flex items-center justify-between">
+              <span>Customer saves</span>
+              <span className="text-green-600 font-extrabold">
+                £{(parseFloat(priceOriginal) - parseFloat(priceDiscount)).toFixed(2)}
+                {' '}({Math.round((1 - parseFloat(priceDiscount) / parseFloat(priceOriginal)) * 100)}% off)
+              </span>
+            </div>
+          )}
 
           {/* Stock Input */}
           <div className="flex flex-col gap-1.5">
