@@ -7,22 +7,13 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-      }
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'firebasestorage.googleapis.com' }
     ],
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, // Esto mantiene el despliegue activo
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-} as any; // <--- ESTE "as any" es la clave
+} as any;
 
 export default withPWA(nextConfig);
