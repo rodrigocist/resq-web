@@ -11,12 +11,9 @@ interface SurpriseBagCardProps {
     stock: number;
     status: string;
     pickup_window?: { start?: any; end?: any };
-    start?: any;
-    end?: any;
-    merchant_rating?: number;
     merchant_image_url?: string;
-    image_url?: string;
-    rating?: number;
+    merchant_rating?: number;
+    price_original?: number;
   };
   onClick?: (bag: any) => void;
 }
@@ -25,7 +22,7 @@ const getMerchantMetadata = (name: string) => {
   const n = name.toLowerCase();
   let imageUrl = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600';
   let rating = 4.6;
-  let category = 'Homemade Food';
+  let category = 'Coffee Shop';
 
   if (n.includes('pan') || n.includes('bakery') || n.includes('pasteler')) {
     imageUrl = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=600';
@@ -42,6 +39,9 @@ const getMerchantMetadata = (name: string) => {
   } else if (n.includes('market') || n.includes('super')) {
     imageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=600';
     rating = 4.4; category = 'Supermarket';
+  } else if (n.includes('home') || n.includes('made')) {
+    imageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=600';
+    rating = 4.4; category = 'Homemade Food';
   }
 
   return { imageUrl, rating, category };
@@ -56,29 +56,30 @@ function parseDate(value: any): Date | null {
 
 export default function SurpriseBagCard({ bag, onClick }: SurpriseBagCardProps) {
   const meta = getMerchantMetadata(bag.merchant_name);
-  const imageUrl = bag.merchant_image_url || bag.image_url || meta.imageUrl;
-  const rating = bag.merchant_rating || bag.rating || meta.rating;
+  // Prefer real merchant data (enriched in page.tsx), fallback to name-based
+  const imageUrl = bag.merchant_image_url || meta.imageUrl;
+  const rating = bag.merchant_rating || meta.rating;
   const category = meta.category;
 
-  const startTime = parseDate(bag.pickup_window?.start || bag.start);
-  const endTime = parseDate(bag.pickup_window?.end || bag.end);
+  const startTime = parseDate(bag.pickup_window?.start);
+  const endTime = parseDate(bag.pickup_window?.end);
   const formattedWindow = startTime && endTime
     ? `${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })} – ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}`
     : 'Check pickup time';
 
-  const originalPrice = (bag.price_discount * 3).toFixed(2);
-  const savings = (parseFloat(originalPrice) - bag.price_discount).toFixed(2);
+  const originalPrice = bag.price_original ?? parseFloat((bag.price_discount * 3).toFixed(2));
+  const savings = (originalPrice - bag.price_discount).toFixed(2);
+  const savingsPct = Math.round((1 - bag.price_discount / originalPrice) * 100);
   const isLowStock = bag.stock > 0 && bag.stock <= 3;
   const isOutOfStock = bag.stock <= 0;
 
   return (
     <div
       onClick={() => !isOutOfStock && onClick?.(bag)}
-      className={`overflow-hidden rounded-3xl border transition-all duration-200 ${
-        isOutOfStock
+      className={`overflow-hidden rounded-3xl border transition-all duration-200 ${isOutOfStock
           ? 'border-stone-100 bg-white opacity-60'
           : 'border-stone-100 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:scale-98'
-      }`}
+        }`}
     >
       {/* Image */}
       <div className="relative h-44 w-full bg-stone-100">
@@ -126,12 +127,14 @@ export default function SurpriseBagCard({ bag, onClick }: SurpriseBagCardProps) 
 
         <div className="flex items-center justify-between pt-1">
           <div>
-            <span className="text-stone-400 line-through text-xs">£{originalPrice}</span>
+            <span className="text-stone-400 line-through text-xs">£{originalPrice.toFixed(2)}</span>
             <div className="flex items-baseline gap-0.5">
               <span className="text-sm font-bold text-green-700">£</span>
               <span className="text-2xl font-extrabold text-green-700 leading-none">{bag.price_discount.toFixed(2)}</span>
             </div>
-            <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded-md">Save £{savings}</span>
+            <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded-md">
+              Save £{savings} ({savingsPct}% off)
+            </span>
           </div>
 
           {!isOutOfStock && (

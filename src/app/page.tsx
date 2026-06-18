@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs } from 'firebase/firestore';
 import SurpriseBagCard from '@/components/SurpriseBagCard';
 import BagDetailModal from '@/components/BagDetailModal';
 import { Search, Info, Leaf, Wifi, WifiOff, MapPin } from 'lucide-react';
@@ -82,25 +82,44 @@ export default function Home() {
   useEffect(() => {
     if (db) {
       setIsFirebaseConnected(true);
-      try {
-        const colRef = collection(db, 'surprise_bags');
-        const unsubscribe = onSnapshot(
-          colRef,
-          (snapshot) => {
-            const list: any[] = [];
-            snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
-            setBags(list);
-            setLoading(false);
-          },
-          (error) => {
-            console.error('Firestore onSnapshot error:', error);
-            fallbackToLocal();
-          }
-        );
-        return unsubscribe;
-      } catch {
-        fallbackToLocal();
-      }
+
+      let unsubscribeBags: (() => void) | undefined;
+
+      // Await merchants FIRST, then subscribe to bags — avoids the race condition
+      getDocs(collection(db, 'merchants'))
+        .then((snap) => {
+          const merchantMap: Record<string, { image_url?: string; rating?: number }> = {};
+          snap.forEach((d) => {
+            const data = d.data();
+            merchantMap[d.id] = { image_url: data.image_url, rating: data.rating };
+          });
+
+          const colRef = collection(db, 'surprise_bags');
+          unsubscribeBags = onSnapshot(
+            colRef,
+            (snapshot) => {
+              const list: any[] = [];
+              snapshot.forEach((doc) => {
+                const bag = { id: doc.id, ...doc.data() } as any;
+                const merchant = merchantMap[bag.merchant_id];
+                if (merchant) {
+                  bag.merchant_image_url = merchant.image_url || '';
+                  bag.merchant_rating = merchant.rating || 4.5;
+                }
+                list.push(bag);
+              });
+              setBags(list);
+              setLoading(false);
+            },
+            (error) => {
+              console.error('Firestore onSnapshot error:', error);
+              fallbackToLocal();
+            }
+          );
+        })
+        .catch(() => fallbackToLocal());
+
+      return () => unsubscribeBags?.();
     } else {
       fallbackToLocal();
     }
