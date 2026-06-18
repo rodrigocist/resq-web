@@ -12,8 +12,10 @@ const nextConfig = {
     ],
   },
   typescript: {
-    ignoreBuildErrors: true, // Esto mantiene el despliegue activo
+    ignoreBuildErrors: true,
   },
+  // Esto es lo que pide Next.js 16 para silenciar el error de Turbopack
+  turbopack: {},
 } as any;
 
 export default withPWA(nextConfig);
