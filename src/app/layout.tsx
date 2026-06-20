@@ -40,25 +40,26 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${inter.variable} h-full`}>
-      <body className="font-sans antialiased bg-slate-100 h-full">
-        <AuthProvider>
-          <CartProvider>
-            {/* Mobile-first container: centered card on desktop, full-screen on mobile */}
-            <div className="mx-auto max-w-md min-h-screen bg-background shadow-2xl relative flex flex-col border-x border-slate-200/50">
-              <Navbar />
-              <main className="flex-1 flex flex-col pb-16 overflow-y-auto">
-                {children}
-              </main>
-            </div>
-          </CartProvider>
-        </AuthProvider>
+      <html lang="en" className={`${outfit.variable} ${inter.variable} h-full`}>
+      <body className="font-sans antialiased bg-slate-50 h-full">
+      <AuthProvider>
+        <CartProvider>
+          {/* Contenedor global fluido para toda la pantalla */}
+          <div className="w-full min-h-screen bg-slate-50 relative flex flex-col">
+            <Navbar />
+            {/* Eliminamos las restricciones rígidas y flex-col restrictivos */}
+            <main className="flex-1 w-full min-w-0 block pb-16">
+              {children}
+            </main>
+          </div>
+        </CartProvider>
+      </AuthProvider>
       </body>
-    </html>
+      </html>
   );
 }

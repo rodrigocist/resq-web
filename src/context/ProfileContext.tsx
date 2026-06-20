@@ -1,0 +1,31 @@
+"use client";
+
+import React, { createContext, useContext, useState } from 'react';
+
+type ActiveTab = 'orders' | 'personal' | 'security';
+
+interface ProfileContextValue {
+  activeTab: ActiveTab;
+  setActiveTab: (tab: ActiveTab) => void;
+}
+
+const ProfileContext = createContext<ProfileContextValue | undefined>(undefined);
+
+export function ProfileProvider({ children }: { children: React.ReactNode }) {
+  const [activeTab, setActiveTab] = useState<ActiveTab>('orders');
+
+  return (
+    <ProfileContext.Provider value={{ activeTab, setActiveTab }}>
+      {children}
+    </ProfileContext.Provider>
+  );
+}
+
+export function useProfile() {
+  const context = useContext(ProfileContext);
+  if (!context) {
+    throw new Error('useProfile must be used within ProfileProvider');
+  }
+  return context;
+}
+

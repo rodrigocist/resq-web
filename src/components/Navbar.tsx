@@ -10,7 +10,7 @@ import { signOut } from '@/lib/auth';
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, role, profile, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const { totalItems } = useCart();
 
   const isMerchant = role === 'merchant';
@@ -76,7 +76,16 @@ export default function Navbar() {
                     )
                   )}
 
-                  {/* Avatar + sign out */}
+                  {/* Profile link + sign out */}
+                  <Link
+                    href="/profile"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors"
+                    title="Mi cuenta"
+                    aria-label="Mi cuenta"
+                  >
+                    <User className="h-4 w-4" />
+                  </Link>
+
                   <button
                     onClick={handleSignOut}
                     className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors"

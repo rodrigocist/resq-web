@@ -3,7 +3,7 @@ import {
   doc,
   collection,
   serverTimestamp,
-  Timestamp,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { User } from 'firebase/auth';
@@ -15,11 +15,28 @@ export interface CartItem {
   merchantName: string;
   quantity: number;
   unitPrice: number;
-  pickupWindow: { start: any; end: any };
+  pickupWindow: { start: unknown; end: unknown };
 }
 
 export interface OrderResult {
   orderId: string;
+}
+
+export interface Order {
+  id: string;
+  user_id: string;
+  user_email?: string | null;
+  user_name?: string | null;
+  merchant_id?: string;
+  merchant_name?: string;
+  bag_id?: string;
+  bag_name?: string;
+  quantity?: number;
+  unit_price?: number;
+  total_price?: number;
+  status?: string;
+  pickup_window?: unknown;
+  created_at?: unknown;
 }
 
 export async function placeOrder(
@@ -84,10 +101,63 @@ export async function placeOrder(
 }
 
 /** Helper: convert Firestore Timestamp or ISO string to Date */
-export function toDate(value: any): Date | null {
+export function toDate(value: unknown): Date | null {
   if (!value) return null;
   if (value instanceof Date) return value;
   if (value.toDate) return value.toDate();
   if (value.seconds) return new Date(value.seconds * 1000);
   return new Date(value);
 }
+
+import {
+  collection as collectionRef,
+  query,
+  where,
+  orderBy,
+  getDocs,
+} from 'firebase/firestore';
+
+/**
+ * Obtener órdenes de un usuario por UID, ordenadas por `created_at` descendente.
+ */
+export async function getOrdersByUser(uid: string): Promise<Order[]> {
+  if (!uid) return [];
+
+  const q = query(
+    collectionRef(db, 'orders'),
+    where('user_id', '==', uid),
+    orderBy('created_at', 'desc')
+  );
+
+  const snap = await getDocs(q);
+  const results: Order[] = [];
+
+  snap.forEach((doc) => {
+    const data = doc.data();
+    // cast via Record<string, unknown> then to Order to avoid `any`
+    const obj = { id: doc.id, ...(data as Record<string, unknown>) } as unknown as Order;
+    results.push(obj);
+  });
+
+  return results;
+}
+
+/**
+ * Marca una orden como completada (retirada) en Firestore.
+ * Actualiza el estado a 'completed' y añade un timestamp de finalización.
+ */
+export async function completeOrder(orderId: string): Promise<void> {
+  if (!orderId) throw new Error('Order ID is required');
+
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      status: 'completed',
+      completed_at: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Error completing order:', err);
+    throw new Error(`Failed to complete order ${orderId}`);
+  }
+}
+
